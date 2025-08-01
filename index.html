@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whisper Audio Transcription</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .feature-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 8px;
+            font-weight: bold;
+        }
+        
+        .translation-result {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .audio-metrics {
+            background: #f0f8ff;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-height: 80px;
+        }
+
+        .file-input-display:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .file-input-display.has-file {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .file-icon {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 60px;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result.loading {
+            background: #e2e3e5;
+            border: 1px solid #d6d8db;
+            color: #383d41;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .transcript-text {
+            line-height: 1.6;
+            font-size: 1.05em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .api-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .supported-formats {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Whisper Transcription</h1>
+        <p class="subtitle">Professional AI transcription with automatic English translation
+            <span class="feature-badge">🎵 Audio Enhanced</span>
+            <span class="feature-badge">🤖 GPT-4 Powered</span>
+            <span class="feature-badge">🌍 Always English</span>
+        </p>
+
+        <form id="transcriptionForm">
+            <div class="form-group">
+                <label for="audioFile">📁 Audio File</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="audioFile" class="file-input" accept="audio/*" required>
+                    <div class="file-input-display" id="fileDisplay">
+                        <span class="file-icon">📎</span>
+                        <span>Click to select an audio file or drag & drop</span>
+                    </div>
+                </div>
+                <div class="supported-formats">
+                    Supported: MP3, WAV, M4A, FLAC, OGG, WEBM, MP4
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                🚀 Transcribe Audio
+            </button>
+        </form>
+
+        <div id="result" class="result" style="display: none;"></div>
+
+        <div class="api-info">
+            <strong>API Endpoint:</strong> POST /transcribe<br>
+            <strong>Server:</strong> <span id="serverStatus">Checking...</span>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('transcriptionForm');
+        const fileInput = document.getElementById('audioFile');
+        const fileDisplay = document.getElementById('fileDisplay');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultDiv = document.getElementById('result');
+        const serverStatus = document.getElementById('serverStatus');
+        
+        // No form controls needed - everything is hardcoded to optimal settings
+
+        // Check server status on load
+        checkServerStatus();
+
+        // File input handling
+        fileInput.addEventListener('change', handleFileSelect);
+        fileDisplay.addEventListener('dragover', handleDragOver);
+        fileDisplay.addEventListener('drop', handleDrop);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            updateFileDisplay(file);
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            fileDisplay.style.borderColor = '#667eea';
+            fileDisplay.style.background = '#f0f4ff';
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFileDisplay(files[0]);
+            }
+            fileDisplay.style.borderColor = '#ddd';
+            fileDisplay.style.background = '#f9f9f9';
+        }
+
+        function updateFileDisplay(file) {
+            if (file) {
+                const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+                fileDisplay.innerHTML = `
+                    <span class="file-icon">🎵</span>
+                    <div>
+                        <strong>${file.name}</strong><br>
+                        <small>${fileSize} MB</small>
+                    </div>
+                `;
+                fileDisplay.classList.add('has-file');
+            } else {
+                fileDisplay.innerHTML = '<span class="file-icon">📎</span><span>Click to select an audio file or drag & drop</span>';
+                fileDisplay.classList.remove('has-file');
+            }
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const file = fileInput.files[0];
+            
+            // HARDCODED OPTIMAL SETTINGS - No user choice needed
+            const language = 'auto';
+            const enhanceAccuracy = 'true';
+            const useOpenAI = 'true';
+            const enhancementType = 'professional';
+            const enhanceAudio = 'true';
+            const audioLevel = 'aggressive';
+            const autoTranslate = 'true';
+            
+            // Debug: Log what we're sending
+            console.log('📝 Using optimal default settings:');
+            console.log('🔍 Language: Auto-detect');
+            console.log('🤖 OpenAI GPT-4: Enabled');
+            console.log('🎯 Enhancement: Professional');
+            console.log('🎵 Audio: Aggressive enhancement');
+            console.log('🌍 Translation: Always English');
+
+            if (!file) {
+                showResult('error', 'Please select an audio file');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Processing...';
+            showResult('loading', 'Transcribing audio... This may take a moment.');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Add all parameters to form data
+                formData.append('lang', language);
+                formData.append('enhance_accuracy', enhanceAccuracy);
+                formData.append('use_openai', useOpenAI);
+                formData.append('enhancement_type', enhancementType);
+                formData.append('enhance_audio', enhanceAudio);
+                formData.append('audio_enhancement_level', audioLevel);
+                formData.append('auto_translate_to_english', autoTranslate);
+
+                const response = await fetch('http://127.0.0.1:8000/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showResult('success', result);
+                } else {
+                    const errorText = await response.text();
+                    showResult('error', `API Error (${response.status}): ${errorText}`);
+                }
+            } catch (error) {
+                showResult('error', `Connection Error: ${error.message}. Make sure the server is running on http://127.0.0.1:8000`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Transcribe Audio';
+            }
+        });
+
+        function showResult(type, result = null) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = `result ${type}`;
+            
+            if (type === 'loading') {
+                resultDiv.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    ${result || 'Processing...'}
+                `;
+            } else if (type === 'error') {
+                resultDiv.innerHTML = `
+                    <div class="result-header">❌ Error:</div>
+                    ${result}
+                `;
+            } else if (type === 'success') {
+                const languageNames = {
+                    'en': 'English',
+                    'es': 'Spanish (Español)',
+                    'fr': 'French (Français)',
+                    'de': 'German (Deutsch)',
+                    'pt': 'Portuguese (Português)',
+                    'it': 'Italian (Italiano)',
+                    'ru': 'Russian (Русский)',
+                    'ja': 'Japanese (日本語)',
+                    'ko': 'Korean (한국어)',
+                    'zh': 'Chinese (中文)',
+                    'ar': 'Arabic (العربية)',
+                    'hi': 'Hindi (हिन्दी)'
+                };
+                
+                // Extract data from result
+                const transcript = result.transcript;
+                const originalTranscript = result.original_transcript;
+                const detectedLanguage = result.detected_language;
+                const enhanced = result.enhanced;
+                const openaiEnhanced = result.openai_enhanced;
+                const enhancementType = result.enhancement_type;
+                const audioEnhancement = result.audio_enhancement;
+                const translationInfo = result.translation_info;
+                const englishTranslation = result.english_translation;
+                const originalLanguageText = result.original_language_text;
+
+                const languageDisplay = detectedLanguage ? 
+                    `<div style="margin-bottom: 10px; color: #28a745; font-weight: bold;">
+                        🔍 Detected Language: ${languageNames[detectedLanguage] || detectedLanguage}
+                    </div>` : '';
+
+                const enhancedDisplay = enhanced ? 
+                    `<div style="margin-bottom: 10px; color: #007bff; font-weight: bold;">
+                        ✨ ${openaiEnhanced ? 'OpenAI GPT-4' : 'Dataset'} Enhanced (${enhancementType})
+                    </div>` : '';
+
+                // Audio enhancement info
+                const audioDisplay = audioEnhancement && audioEnhancement.enhancement !== 'disabled' ?
+                    `<div class="audio-metrics">
+                        🎵 Audio Enhancement: ${audioEnhancement.enhancement === 'failed' ? '❌ Failed' : '✅ Applied'}
+                        ${audioEnhancement.snr_improvement_db ? 
+                            `<br>📈 Signal Quality Improved: +${audioEnhancement.snr_improvement_db.toFixed(1)} dB` : ''}
+                    </div>` : '';
+
+                // Translation display
+                const translationDisplay = englishTranslation && originalLanguageText ? 
+                    `<div class="translation-result">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #667eea;">
+                            🌍 English Translation:
+                        </div>
+                        <div class="transcript-text" style="margin-bottom: 15px;">
+                            ${englishTranslation}
+                        </div>
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; font-weight: bold; color: #6c757d;">
+                                📄 Show Original Language Text
+                            </summary>
+                            <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <strong>Original (${languageNames[detectedLanguage] || detectedLanguage}):</strong>
+                                <div style="margin-top: 5px; font-style: italic;">
+                                    ${originalLanguageText}
+                                </div>
+                            </div>
+                        </details>
+                        <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                            ${translationInfo}
+                        </div>
+                    </div>` : '';
+
+                // Show comparison if we have both original and enhanced text
+                const showComparison = enhanced && originalTranscript && originalTranscript !== transcript && !englishTranslation;
+                const comparisonDisplay = showComparison ? 
+                    `<details style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <summary style="cursor: pointer; font-weight: bold; color: #6c757d;">
+                            📊 Show Before/After Enhancement
+                        </summary>
+                        <div style="margin-top: 10px;">
+                            <div style="margin-bottom: 10px;">
+                                <strong>Before Enhancement:</strong>
+                                <div style="background: #fff3cd; padding: 8px; border-radius: 3px; font-style: italic;">
+                                    ${originalTranscript}
+                                </div>
+                            </div>
+                            <div>
+                                <strong>After Enhancement:</strong>
+                                <div style="background: #d1ecf1; padding: 8px; border-radius: 3px;">
+                                    ${transcript}
+                                </div>
+                            </div>
+                        </div>
+                    </details>` : '';
+                
+                resultDiv.innerHTML = `
+                    <div class="result-header">✅ Transcription Complete:</div>
+                    ${languageDisplay}
+                    ${enhancedDisplay}
+                    ${audioDisplay}
+                    ${translationDisplay}
+                    ${!englishTranslation ? `<div class="transcript-text">${transcript}</div>` : ''}
+                    ${comparisonDisplay}
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="result-header">❌ Error:</div>
+                    ${message}
+                `;
+            }
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/docs', { method: 'HEAD' });
+                if (response.ok) {
+                    serverStatus.textContent = '✅ Running on http://127.0.0.1:8000';
+                    serverStatus.style.color = '#28a745';
+                } else {
+                    throw new Error('Server not responding');
+                }
+            } catch (error) {
+                serverStatus.textContent = '❌ Not running - Start server first';
+                serverStatus.style.color = '#dc3545';
+            }
+        }
+    </script>
+</body>
+</html>

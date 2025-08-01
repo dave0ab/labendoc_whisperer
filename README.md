@@ -65,17 +65,16 @@ pip install -r requirements.txt
 
 ### 2. Start the Server
 ```bash
-# From the whisper_api directory
-source whisper_env/bin/activate
-uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+# Activate virtual environment and start server
+source whisper_env/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The server will be available at: **http://127.0.0.1:8000**
+The server will be available at: **http://localhost:8000** or **http://0.0.0.0:8000**
 
 ## 📖 API Documentation
 
-- **Interactive Docs**: http://127.0.0.1:8000/docs
-- **OpenAPI Schema**: http://127.0.0.1:8000/openapi.json
+- **Interactive Docs**: http://localhost:8000/docs
+- **OpenAPI Schema**: http://localhost:8000/openapi.json
 
 ## 🎯 API Usage
 
@@ -98,13 +97,13 @@ The server will be available at: **http://127.0.0.1:8000**
 #### Using curl
 ```bash
 # Auto-detect language (recommended)
-curl -X POST "http://127.0.0.1:8000/transcribe?lang=auto" \
+curl -X POST "http://localhost:8000/transcribe?lang=auto" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@recording.mp3"
 
 # Or specify a language
-curl -X POST "http://127.0.0.1:8000/transcribe?lang=es" \
+curl -X POST "http://localhost:8000/transcribe?lang=es" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@recording.mp3"
@@ -114,7 +113,7 @@ curl -X POST "http://127.0.0.1:8000/transcribe?lang=es" \
 ```python
 import requests
 
-url = "http://127.0.0.1:8000/transcribe"
+url = "http://localhost:8000/transcribe"
 files = {"file": open("recording.mp3", "rb")}
 params = {"lang": "auto"}  # Auto-detect language
 
@@ -130,7 +129,7 @@ print(f"Transcript: {result['transcript']}")
 const formData = new FormData();
 formData.append('file', audioFile);
 
-fetch('http://127.0.0.1:8000/transcribe?lang=auto', {
+fetch('http://localhost:8000/transcribe?lang=auto', {
   method: 'POST',
   body: formData
 })

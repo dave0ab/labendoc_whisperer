@@ -1,7 +1,20 @@
 import whisper
-from pydub import AudioSegment
 import os
 import uuid
+import subprocess
+import shutil
+
+# Import centralized FFmpeg utilities
+from ffmpeg_utils import setup_ffmpeg_environment, configure_pydub_ffmpeg
+
+# Set up FFmpeg environment
+setup_ffmpeg_environment()
+
+from pydub import AudioSegment
+
+# Configure pydub to use the correct FFmpeg paths
+configure_pydub_ffmpeg()
+
 try:
     from accuracy_enhancer import enhance_transcription_accuracy
     from advanced_accuracy import enhance_transcription_with_datasets
@@ -60,27 +73,69 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
             enhanced_file_path, audio_metrics = enhance_audio_for_transcription(file_path, audio_enhancement_level)
             
             # Convert enhanced audio to WAV format
-            audio = AudioSegment.from_file(enhanced_file_path)
-            wav_path = f"enhanced_{uuid.uuid4()}.wav"
-            audio.export(wav_path, format="wav")
-            
-            # Clean up enhanced file if it's different from original
-            if enhanced_file_path != file_path and os.path.exists(enhanced_file_path):
-                os.remove(enhanced_file_path)
+            try:
+                audio = AudioSegment.from_file(enhanced_file_path)
+                wav_path = f"enhanced_{uuid.uuid4()}.wav"
+                audio.export(wav_path, format="wav")
+                
+                # Clean up enhanced file if it's different from original
+                if enhanced_file_path != file_path and os.path.exists(enhanced_file_path):
+                    os.remove(enhanced_file_path)
+            except Exception as e:
+                print(f"⚠️ Audio enhancement failed: {e}")
+                print("📝 Proceeding with original audio...")
+                # Fallback to original audio
+                try:
+                    audio = AudioSegment.from_file(file_path)
+                    wav_path = f"{uuid.uuid4()}.wav"
+                    audio.export(wav_path, format="wav")
+                    audio_metrics = {"enhancement": "failed", "error": str(e)}
+                except Exception as audio_error:
+                    print(f"❌ Critical error: Cannot process audio file: {audio_error}")
+                    return {
+                        "error": f"Audio processing failed: {audio_error}",
+                        "success": False,
+                        "transcription": "",
+                        "language": "unknown",
+                        "enhancement_info": "Audio processing failed",
+                        "audio_metrics": {"enhancement": "failed", "error": str(audio_error)}
+                    }
         except Exception as e:
             print(f"⚠️ Audio enhancement failed: {e}")
             print("📝 Using original audio...")
             # Fallback to original audio
+            try:
+                audio = AudioSegment.from_file(file_path)
+                wav_path = f"{uuid.uuid4()}.wav"
+                audio.export(wav_path, format="wav")
+                audio_metrics = {"enhancement": "failed", "error": str(e)}
+            except Exception as audio_error:
+                print(f"❌ Critical error: Cannot process audio file: {audio_error}")
+                return {
+                    "error": f"Audio processing failed: {audio_error}",
+                    "success": False,
+                    "transcription": "",
+                    "language": "unknown",
+                    "enhancement_info": "Audio processing failed",
+                    "audio_metrics": {"enhancement": "failed", "error": str(audio_error)}
+                }
+    else:
+        # Convert original audio to WAV format
+        try:
             audio = AudioSegment.from_file(file_path)
             wav_path = f"{uuid.uuid4()}.wav"
             audio.export(wav_path, format="wav")
-            audio_metrics = {"enhancement": "failed", "error": str(e)}
-    else:
-        # Convert original audio to WAV format
-        audio = AudioSegment.from_file(file_path)
-        wav_path = f"{uuid.uuid4()}.wav"
-        audio.export(wav_path, format="wav")
-        audio_metrics = {"enhancement": "disabled" if not enhance_audio else "not_available"}
+            audio_metrics = {"enhancement": "disabled" if not enhance_audio else "not_available"}
+        except Exception as e:
+            print(f"❌ Critical error: Cannot process audio file: {e}")
+            return {
+                "error": f"Audio processing failed: {e}",
+                "success": False,
+                "transcription": "",
+                "language": "unknown",
+                "enhancement_info": "Audio processing failed",
+                "audio_metrics": {"enhancement": "failed", "error": str(e)}
+            }
 
     # STEP 2: Transcribe with Whisper
     print("🎤 Transcribing with Whisper...")

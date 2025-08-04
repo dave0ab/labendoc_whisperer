@@ -1,21 +1,87 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from transcriber import transcribe_audio
 import uuid
 import shutil
 import os
+import secrets
+from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(title="Whisper Audio Transcription API", description="AI-powered audio transcription using OpenAI Whisper")
 
-# Enable CORS for web interface
+# Authentication configuration
+API_TOKEN = os.getenv("API_TOKEN", "lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE")
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "api.testing.labendoc.com",
+    "transcribe.testing.labendoc.com"
+]
+
+# Security middleware
+security = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify the API token"""
+    print(f"🔐 Authentication attempt with token: {credentials.credentials[:10]}...")
+    print(f"🔐 Expected token: {API_TOKEN[:10]}...")
+    print(f"🔐 Token match: {credentials.credentials == API_TOKEN}")
+    
+    if credentials.credentials != API_TOKEN:
+        print(f"❌ Authentication failed: Invalid token")
+        print(f"❌ Received: {credentials.credentials}")
+        print(f"❌ Expected: {API_TOKEN}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    print(f"✅ Authentication successful")
+    return credentials.credentials
+
+def verify_host(request: Request):
+    """Verify the request is from allowed hosts"""
+    client_host = request.client.host
+    print(f"🌐 Host verification: {client_host}")
+    
+    # For development, allow all localhost connections
+    if client_host.startswith('127.') or client_host == 'localhost' or client_host in ALLOWED_HOSTS:
+        print(f"✅ Host allowed: {client_host}")
+        return client_host
+    else:
+        print(f"❌ Host not allowed: {client_host}")
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Host not allowed"
+        )
+
+# Enable CORS for web interface with restricted origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=[
+        "http://localhost:3000", 
+        "https://transcribe.testing.labendoc.com",
+        "https://api.testing.labendoc.com",
+        "https://app.testing.labendoc.com"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+async def health_check(
+    request: Request, 
+    token: str = Depends(verify_token)
+):
+    """Health check endpoint for Docker"""
+    return {"status": "healthy", "service": "transcribe"}
 
 @app.get("/", response_class=HTMLResponse)
 async def get_web_interface():
@@ -28,6 +94,7 @@ async def get_web_interface():
 
 @app.post("/transcribe")
 async def transcribe(
+    request: Request,
     file: UploadFile = File(...), 
     lang: str = "auto", 
     enhance_accuracy: bool = True,
@@ -35,7 +102,8 @@ async def transcribe(
     enhancement_type: str = "professional",
     enhance_audio: bool = True,
     audio_enhancement_level: str = "medium",
-    auto_translate_to_english: bool = False
+    auto_translate_to_english: bool = False,
+    token: str = Depends(verify_token)
 ):
     """
     Transcribe an audio file using Whisper AI with audio enhancement and OpenAI features
@@ -50,8 +118,15 @@ async def transcribe(
     - **auto_translate_to_english**: Automatically translate any language to English (requires OpenAI)
     """
     temp_filename = f"{uuid.uuid4()}_{file.filename}"
+    print(f"🎵 Processing audio file: {temp_filename}")
+    print(f"   📁 Original filename: {file.filename}")
+    print(f"   📏 File size: {file.size} bytes")
+    print(f"   🎯 Content type: {file.content_type}")
+    
     with open(temp_filename, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+    
+    print(f"   💾 Temporary file created: {temp_filename}")
 
     try:
         # OPTIMAL SETTINGS HARDCODED - No user configuration needed
@@ -102,6 +177,8 @@ async def transcribe(
         if "original_language_text" in result:
             response["original_language_text"] = result["original_language_text"]
             
+        print(f"   ✅ Transcription completed successfully")
         return response
     finally:
+        print(f"   🗑️ Cleaning up temporary file: {temp_filename}")
         os.remove(temp_filename)

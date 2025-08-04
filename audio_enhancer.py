@@ -6,10 +6,21 @@ import numpy as np
 import librosa
 import noisereduce as nr
 from scipy import signal
+import os
+
+# Import centralized FFmpeg utilities
+from ffmpeg_utils import setup_ffmpeg_environment, configure_pydub_ffmpeg
+
+# Set up FFmpeg environment
+setup_ffmpeg_environment()
+
 from pydub import AudioSegment
+
+# Configure pydub to use the correct FFmpeg paths
+configure_pydub_ffmpeg()
+
 import webrtcvad
 import io
-import os
 from typing import Tuple, Optional
 import warnings
 warnings.filterwarnings('ignore')

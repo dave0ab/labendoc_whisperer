@@ -1,21 +1,22 @@
 [Unit]
-Description=Lab-Endoc Whisper Transcription Service
-After=network.target
-Wants=network.target
+Description=Lab-Endoc Whisper Transcription Service (Docker)
+After=docker.service
+Requires=docker.service
 
 [Service]
-Type=exec
+Type=oneshot
 User=dev
 Group=dev
 WorkingDirectory=/home/dev/labendoc/transcribe
-Environment=PATH=/home/dev/labendoc/transcribe/venv/bin
-ExecStart=/home/dev/labendoc/transcribe/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
-ExecReload=/bin/kill -HUP $MAINPID
-Restart=always
-RestartSec=10
+RemainAfterExit=yes
+
+ExecStart=/usr/bin/docker-compose -f /home/dev/labendoc/transcribe/docker-compose.yml up -d
+ExecStop=/usr/bin/docker-compose -f /home/dev/labendoc/transcribe/docker-compose.yml down
+ExecReload=/usr/bin/docker-compose -f /home/dev/labendoc/transcribe/docker-compose.yml restart
+
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=whisper
+SyslogIdentifier=whisper-docker
 
 [Install]
 WantedBy=multi-user.target 

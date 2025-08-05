@@ -156,11 +156,21 @@ async def transcribe(
             audio_enhancement_level=audio_enhancement_level,
             auto_translate_to_english=auto_translate_to_english
         )
+        
+        # Check if transcription failed
+        if "error" in result or "success" in result and not result.get("success", True):
+            error_msg = result.get("error", "Transcription failed")
+            print(f"   ❌ Transcription failed: {error_msg}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Transcription failed: {error_msg}"
+            )
+        
         # Prepare response with comprehensive information
         response = {
-            "transcript": result["text"],
-            "original_transcript": result.get("original_text", result["text"]),
-            "detected_language": result["detected_language"],
+            "transcript": result.get("text", ""),
+            "original_transcript": result.get("original_text", result.get("text", "")),
+            "detected_language": result.get("detected_language", "unknown"),
             "enhanced": enhance_accuracy,
             "openai_enhanced": use_openai,
             "enhancement_type": result.get("enhancement_type", "dataset"),

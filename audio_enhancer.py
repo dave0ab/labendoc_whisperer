@@ -7,6 +7,7 @@ import librosa
 import noisereduce as nr
 from scipy import signal
 import os
+import tempfile
 
 # Import centralized FFmpeg utilities
 from ffmpeg_utils import setup_ffmpeg_environment, configure_pydub_ffmpeg
@@ -61,8 +62,10 @@ class AudioEnhancer:
             else:
                 enhanced = self._medium_enhancement(audio_data, sr)  # Default
             
-            # Save enhanced audio
-            output_path = f"enhanced_{os.path.basename(file_path)}.wav"
+            # Save enhanced audio to writable temporary directory
+            temp_dir = os.path.join(tempfile.gettempdir(), "transcribe_temp")
+            os.makedirs(temp_dir, exist_ok=True)
+            output_path = os.path.join(temp_dir, f"enhanced_{os.path.basename(file_path)}.wav")
             self._save_audio(enhanced, sr, output_path)
             
             print(f"✅ Audio enhanced successfully -> {output_path}")

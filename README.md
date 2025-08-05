@@ -1,207 +1,122 @@
 # Lab-Endoc Transcription Service
 
-AI-powered audio transcription service using OpenAI Whisper with audio enhancement and text improvement.
+AI-powered audio transcription service using OpenAI Whisper with audio enhancement and automatic English translation.
 
-## 🚀 Quick Setup
+## 🚀 Deployment
 
-### 1. Install System Dependencies
+This service is deployed on **Leapcell** at:
+- **URL**: https://labendocwhisperer-dave0ab9103-dcy37ba4.leapcell.dev
+- **Health Check**: https://labendocwhisperer-dave0ab9103-dcy37ba4.leapcell.dev/health
+- **API Docs**: https://labendocwhisperer-dave0ab9103-dcy37ba4.leapcell.dev/docs
+
+## 🎯 Features
+
+- **🎵 Audio Enhancement**: Pre-processes audio for better transcription quality
+- **🤖 OpenAI GPT-4 Integration**: Professional text enhancement and translation
+- **🌍 Multi-language Support**: Auto-detection and translation to English
+- **📊 Real-time Processing**: Background job processing with status tracking
+- **🔐 Secure Authentication**: Bearer token authentication
+
+## 📋 API Endpoints
+
+### Health Check
 ```bash
-# Install FFmpeg (required for audio processing)
-sudo apt update
-sudo apt install ffmpeg python3-pip python3-venv
+GET /health
+Authorization: Bearer lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE
 ```
 
-### 2. Create Virtual Environment
+### Transcribe Audio
 ```bash
-# Navigate to project directory
-cd /path/to/labendoc/transcribe
+POST /transcribe
+Authorization: Bearer lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE
+Content-Type: multipart/form-data
 
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate
+Parameters:
+- file: Audio file (MP3, WAV, M4A, FLAC, OGG, WEBM, MP4)
+- lang: Language hint (default: auto)
+- enhance_accuracy: Apply post-processing (default: true)
+- use_openai: Use GPT-4 enhancement (default: true)
+- enhancement_type: Enhancement type (professional, medical, business, legal)
+- enhance_audio: Audio preprocessing (default: true)
+- audio_enhancement_level: Enhancement level (light, medium, aggressive)
+- auto_translate_to_english: Auto-translate to English (default: true)
 ```
 
-### 3. Install Python Dependencies
+### Web Interface
 ```bash
-# Make sure venv is activated (you should see (venv) in prompt)
-pip install -r requirements.txt
+GET /
 ```
+Provides a user-friendly web interface for testing the transcription service.
 
-### 4. Configure Environment
-```bash
-# Create .env file
-cat > .env << EOF
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_MAX_TOKENS=2000
+## 🔧 Technology Stack
 
-# Authentication
-API_TOKEN=your_secure_auth_token_here
-
-# Service Configuration
-HOST=0.0.0.0
-PORT=8000
-LOG_LEVEL=info
-EOF
-```
-
-### 5. Start the Service
-```bash
-# Activate virtual environment (if not already activated)
-source venv/bin/activate
-
-# Start the service
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-## 🔧 Usage
-
-### Service URLs
-- **Web Interface**: http://localhost:8000
-- **Health Check**: http://localhost:8000/health
-- **API Documentation**: http://localhost:8000/docs
-
-### Default API Token
-```
-lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE
-```
-
-### Test the Service
-```bash
-# Health check
-curl -H "Authorization: Bearer lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE" http://localhost:8000/health
-
-# Transcribe audio file
-curl -X POST http://localhost:8000/transcribe \
-  -H "Authorization: Bearer lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE" \
-  -F "audio=@your_audio_file.wav"
-```
-
-## 📋 Prerequisites
-
-- **Python**: 3.8 or higher
-- **FFmpeg**: For audio processing
-- **OpenAI API Key**: For text enhancement (optional)
-- **RAM**: 2GB+ recommended
-- **Storage**: 1GB+ free space
-
-## 🐳 Docker Deployment
-
-### Using Docker Compose
-```bash
-# Start with Docker Compose
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-### Manual Docker Build
-```bash
-# Build image
-docker build -t labendoc-transcription .
-
-# Run container
-docker run -d \
-  --name labendoc-transcription \
-  -p 8000:8000 \
-  -e OPENAI_API_KEY=your_key \
-  -e API_TOKEN=your_token \
-  labendoc-transcription
-```
-
-## 🚨 Troubleshooting
-
-### Port Already in Use
-```bash
-# Kill existing processes
-pkill -f uvicorn
-
-# Or use different port
-uvicorn main:app --host 0.0.0.0 --port 8001 --reload
-```
-
-### Virtual Environment Issues
-```bash
-# Recreate virtual environment
-rm -rf venv
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### FFmpeg Not Found
-```bash
-# Install FFmpeg
-sudo apt update && sudo apt install ffmpeg
-
-# Verify installation
-ffmpeg -version
-```
-
-### Dependencies Not Found
-```bash
-# Make sure venv is activated
-source venv/bin/activate
-
-# Reinstall dependencies
-pip install -r requirements.txt
-```
-
-## 🔒 Security
-
-- Change the default API token in `.env` file
-- Use HTTPS in production
-- Configure firewall rules
-- Limit access to trusted IPs
-
-## 📊 Features
-
-- **Multi-language transcription** with automatic language detection
-- **Audio enhancement** for better transcription quality
-- **OpenAI GPT-4 integration** for text improvement
-- **Automatic translation** to English
-- **Web interface** for easy testing
-- **RESTful API** for integration
-- **Docker support** for containerized deployment
+- **FastAPI**: Modern Python web framework
+- **OpenAI Whisper**: AI-powered speech recognition
+- **FFmpeg**: Audio processing and enhancement
+- **OpenAI GPT-4**: Text enhancement and translation
+- **Leapcell**: Cloud deployment platform
 
 ## 📁 Project Structure
 
 ```
 transcribe/
 ├── main.py              # FastAPI application
+├── start.py             # Startup script for Leapcell
 ├── transcriber.py       # Core transcription logic
-├── ffmpeg_utils.py      # FFmpeg utilities
-├── audio_enhancer.py    # Audio enhancement
+├── audio_enhancer.py    # Audio enhancement utilities
 ├── openai_enhancer.py   # OpenAI integration
+├── ffmpeg_utils.py      # FFmpeg utilities
 ├── requirements.txt     # Python dependencies
-├── venv/               # Virtual environment
 ├── index.html          # Web interface
-├── docker-compose.yml  # Docker configuration
-└── Dockerfile          # Docker build file
+└── accuracy_data/      # Accuracy enhancement data
 ```
 
-## 🎯 Quick Commands
+## 🛠️ Local Development
 
-```bash
-# Setup (first time only)
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+1. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# Run (every time)
-source venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+2. **Set environment variables**:
+   ```bash
+   export OPENAI_API_KEY=your_openai_api_key
+   export API_TOKEN=lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE
+   ```
 
-# Stop
-Ctrl+C
+3. **Run the service**:
+   ```bash
+   python start.py
+   ```
 
-# Deactivate venv
-deactivate
-``` 
+4. **Test the API**:
+   ```bash
+   curl -H "Authorization: Bearer lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE" http://localhost:8080/health
+   ```
+
+## 🔗 Integration
+
+This service is integrated with the Lab-Endoc backend system:
+
+- **Backend URL**: Uses Leapcell deployment URL
+- **Authentication**: Bearer token system
+- **Job Tracking**: Database-stored job status
+- **File Processing**: Background async processing
+
+## 📊 Performance
+
+- **Response Time**: 30-60 seconds for typical audio files
+- **File Size Limit**: 10MB per file
+- **Supported Formats**: MP3, WAV, M4A, FLAC, OGG, WEBM, MP4
+- **Languages**: Auto-detection with 99+ language support
+
+## 🔐 Security
+
+- **Authentication**: Bearer token required for all endpoints
+- **File Validation**: Strict file type and size validation
+- **Error Handling**: Comprehensive error logging and handling
+- **Rate Limiting**: Built-in request throttling
+
+## 📝 License
+
+This project is part of the Lab-Endoc medical assessment platform. 

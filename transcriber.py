@@ -43,9 +43,16 @@ import tempfile
 cache_dir = os.path.join(tempfile.gettempdir(), "whisper_cache")
 os.makedirs(cache_dir, exist_ok=True)
 
+# Create a writable temporary directory for audio processing
+temp_dir = os.path.join(tempfile.gettempdir(), "transcribe_temp")
+os.makedirs(temp_dir, exist_ok=True)
+
 # Set environment variable for Whisper cache
 os.environ["XDG_CACHE_HOME"] = cache_dir
 os.environ["HF_HOME"] = cache_dir
+
+print(f"📁 Using cache directory: {cache_dir}")
+print(f"📁 Using temp directory: {temp_dir}")
 
 # Load the Whisper model once with custom cache directory
 try:
@@ -93,7 +100,7 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
             # Convert enhanced audio to WAV format
             try:
                 audio = AudioSegment.from_file(enhanced_file_path)
-                wav_path = f"enhanced_{uuid.uuid4()}.wav"
+                wav_path = os.path.join(temp_dir, f"{uuid.uuid4()}.wav")
                 audio.export(wav_path, format="wav")
                 
                 # Clean up enhanced file if it's different from original
@@ -105,7 +112,7 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
                 # Fallback to original audio
                 try:
                     audio = AudioSegment.from_file(file_path)
-                    wav_path = f"{uuid.uuid4()}.wav"
+                    wav_path = os.path.join(temp_dir, f"{uuid.uuid4()}.wav")
                     audio.export(wav_path, format="wav")
                     audio_metrics = {"enhancement": "failed", "error": str(e)}
                 except Exception as audio_error:
@@ -124,7 +131,7 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
             # Fallback to original audio
             try:
                 audio = AudioSegment.from_file(file_path)
-                wav_path = f"{uuid.uuid4()}.wav"
+                wav_path = os.path.join(temp_dir, f"{uuid.uuid4()}.wav")
                 audio.export(wav_path, format="wav")
                 audio_metrics = {"enhancement": "failed", "error": str(e)}
             except Exception as audio_error:
@@ -141,7 +148,7 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
         # Convert original audio to WAV format
         try:
             audio = AudioSegment.from_file(file_path)
-            wav_path = f"{uuid.uuid4()}.wav"
+            wav_path = os.path.join(temp_dir, f"{uuid.uuid4()}.wav")
             audio.export(wav_path, format="wav")
             audio_metrics = {"enhancement": "disabled" if not enhance_audio else "not_available"}
         except Exception as e:
@@ -235,7 +242,7 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
             translation_info = "Already in English - no translation needed"
             print("✅ Text is already in English - no translation needed!")
         else:
-            print(f"🔄 TRANSLATING from {detected_language} to English...")
+            print(f"�� TRANSLATING from {detected_language} to English...")
             print(f"📝 Original text: {final_text[:100]}{'...' if len(final_text) > 100 else ''}")
             try:
                 openai_enhancer = OpenAIEnhancer()

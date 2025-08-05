@@ -7,6 +7,7 @@ import uuid
 import shutil
 import os
 import secrets
+import tempfile
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -23,6 +24,11 @@ ALLOWED_HOSTS = [
     "api.testing.labendoc.com",
     "transcribe.testing.labendoc.com"
 ]
+
+# Get writable temporary directory
+TEMP_DIR = os.path.join(tempfile.gettempdir(), "transcribe_temp")
+os.makedirs(TEMP_DIR, exist_ok=True)
+print(f"📁 Using temporary directory: {TEMP_DIR}")
 
 # Security middleware
 security = HTTPBearer()
@@ -117,18 +123,19 @@ async def transcribe(
     - **audio_enhancement_level**: Audio enhancement level (light, medium, aggressive)
     - **auto_translate_to_english**: Automatically translate any language to English (requires OpenAI)
     """
-    temp_filename = f"{uuid.uuid4()}_{file.filename}"
+    # Use writable temporary directory
+    temp_filename = os.path.join(TEMP_DIR, f"{uuid.uuid4()}_{file.filename}")
     print(f"🎵 Processing audio file: {temp_filename}")
     print(f"   📁 Original filename: {file.filename}")
     print(f"   📏 File size: {file.size} bytes")
     print(f"   🎯 Content type: {file.content_type}")
     
-    with open(temp_filename, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    print(f"   💾 Temporary file created: {temp_filename}")
-
     try:
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        print(f"   💾 Temporary file created: {temp_filename}")
+
         # OPTIMAL SETTINGS HARDCODED - No user configuration needed
         lang = "auto"
         enhance_accuracy = True
@@ -191,4 +198,9 @@ async def transcribe(
         return response
     finally:
         print(f"   🗑️ Cleaning up temporary file: {temp_filename}")
-        os.remove(temp_filename)
+        try:
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+                print(f"   ✅ Temporary file cleaned up successfully")
+        except Exception as e:
+            print(f"   ⚠️ Warning: Could not clean up temporary file: {e}")

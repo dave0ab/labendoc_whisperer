@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     gcc \
     g++ \
+    make \
+    cmake \
+    pkg-config \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -25,8 +29,9 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies with specific handling for webrtcvad
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir wheel setuptools && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

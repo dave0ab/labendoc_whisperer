@@ -35,8 +35,26 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Load the Whisper model once
-model = whisper.load_model("small")  # Use "small", "medium", or "large" for better accuracy
+# Set up writable cache directory for Whisper models
+import os
+import tempfile
+
+# Create a writable cache directory
+cache_dir = os.path.join(tempfile.gettempdir(), "whisper_cache")
+os.makedirs(cache_dir, exist_ok=True)
+
+# Set environment variable for Whisper cache
+os.environ["XDG_CACHE_HOME"] = cache_dir
+os.environ["HF_HOME"] = cache_dir
+
+# Load the Whisper model once with custom cache directory
+try:
+    model = whisper.load_model("small", download_root=cache_dir)  # Use "small", "medium", or "large" for better accuracy
+    print(f"✅ Whisper model loaded successfully from {cache_dir}")
+except Exception as e:
+    print(f"⚠️ Warning: Could not load Whisper model: {e}")
+    print("📝 Will attempt to load model on first use...")
+    model = None
 
 def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bool = True, 
                     use_openai: bool = False, enhancement_type: str = "professional",
@@ -139,6 +157,21 @@ def transcribe_audio(file_path: str, lang_hint: str = "es", enhance_accuracy: bo
 
     # STEP 2: Transcribe with Whisper
     print("🎤 Transcribing with Whisper...")
+    
+    # Load model if not already loaded
+    global model
+    if model is None:
+        try:
+            model = whisper.load_model("small", download_root=cache_dir)
+            print(f"✅ Whisper model loaded successfully from {cache_dir}")
+        except Exception as e:
+            print(f"❌ Failed to load Whisper model: {e}")
+            return {
+                "error": f"Failed to load Whisper model: {e}",
+                "success": False,
+                "transcription": "",
+                "language": "unknown"
+            }
     
     # Auto-detect language if lang_hint is "auto" or None
     if lang_hint == "auto" or lang_hint is None:

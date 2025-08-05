@@ -1,0 +1,37 @@
+# Leapcell Configuration for Lab-Endoc Transcription Service
+name: labendoc-transcription
+description: AI-powered audio transcription service using OpenAI Whisper
+
+# Runtime configuration
+runtime: python3.11
+entrypoint: leapcell-deploy.sh
+
+# Environment variables
+env:
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  FFMPEG_BINARY: "/usr/bin/ffmpeg"
+  FFPROBE_BINARY: "/usr/bin/ffprobe"
+  API_TOKEN: "lSaWtIgjLeWUWBA%FinQI0RgVFiZJtLE"
+
+# Build configuration
+build:
+  commands:
+    - apt-get update
+    - apt-get install -y build-essential python3-dev gcc g++ make cmake pkg-config
+    - apt-get install -y ffmpeg libsndfile1 libasound2-dev portaudio19-dev
+    - pip install --no-cache-dir --upgrade pip setuptools wheel
+    - pip install --no-cache-dir -r requirements.txt
+    - mkdir -p /app/uploads /app/logs
+    - chmod +x leapcell-deploy.sh
+
+# Port configuration
+ports:
+  - 8000
+
+# Health check
+healthcheck:
+  path: /health
+  interval: 30s
+  timeout: 10s
+  retries: 3 
